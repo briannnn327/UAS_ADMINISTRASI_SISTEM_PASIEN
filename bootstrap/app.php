@@ -13,9 +13,15 @@ return Application::configure(basePath: dirname(__DIR__))
     commands: __DIR__.'/../routes/console.php',
     health: '/up',
 )
+
+    ->withMiddleware(function (Middleware $middleware) {
+        $middleware->trustProxies(at: '*');
+        
+        // middleware lain yang sudah ada
+    })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'role' => CheckRole::class, // ← tambah ini
+            'role' => CheckRole::class, 
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
