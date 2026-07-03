@@ -79,8 +79,10 @@
     {{ $slot ?? '' }}
     @yield('content')
 
-    <!-- Footer -->
-    @include('partials.footer')
+    <!-- Footer hanya di landing -->
+    @if(Route::currentRouteName() === 'landing')
+        @include('partials.footer')
+    @endif
 
     <!-- Scripts -->
     <script>

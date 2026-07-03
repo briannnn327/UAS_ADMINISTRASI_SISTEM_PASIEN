@@ -9,9 +9,6 @@ use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
-    /**
-     * Dashboard pasien.
-     */
     public function index()
     {
         $user = Auth::user();
@@ -29,7 +26,7 @@ class DashboardController extends Controller
         // Total survei
         $totalSurveys = Survey::where('patient_id', $user->id)->count();
 
-        // Survei yang belum diisi (status done tapi belum ada survei)
+        // Survei yang belum diisi
         $pendingSurvey = Queue::where('patient_id', $user->id)
             ->where('status', 'done')
             ->whereDoesntHave('survey')
@@ -42,12 +39,14 @@ class DashboardController extends Controller
             ->limit(3)
             ->get();
 
+        // ===== AMBIL DATA BPS =====
+
         return view('patient.dashboard', compact(
-            'activeQueue',
-            'totalQueues',
-            'totalSurveys',
-            'pendingSurvey',
-            'recentQueues'
-        ));
-    }
+                'activeQueue',
+                'totalQueues',
+                'totalSurveys',
+                'pendingSurvey',
+                'recentQueues'
+    ));
+}
 }

@@ -32,6 +32,42 @@
                 ->orderBy('created_at', 'desc')
                 ->limit(3)
                 ->get();
+
+            // ===== AMBIL DATA BPS (caching 1 jam) =====
+            $bpsData = \Illuminate\Support\Facades\Cache::remember('bps_data', 3600, function () {
+                try {
+                    $url = "https://webapi.bps.go.id/v1/api/interoperabilitas/datasource/simdasi/id/25/tahun/2017/id_tabel/TEptbDV0QlRORVl6cjl0THhMbk02Zz09/wilayah/0000000/key/e34d50c3e2e4773ebe4c8162f7a76057";
+                    $ch = curl_init();
+                    curl_setopt($ch, CURLOPT_URL, $url);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    $response = curl_exec($ch);
+                    curl_close($ch);
+
+                    if (!$response) return null;
+                    $data = json_decode($response, true);
+                    return $data['data'] ?? $data;
+                } catch (\Exception $e) {
+                    return null;
+                }
+            });
+
+            // Proses data BPS
+            $bpsList = [];
+            if ($bpsData && is_array($bpsData) && count($bpsData) > 0) {
+                // Coba beberapa format data yang mungkin
+                if (isset($bpsData[0]) && is_array($bpsData[0])) {
+                    $bpsList = $bpsData;
+                } elseif (isset($bpsData['data']) && is_array($bpsData['data'])) {
+                    $bpsList = $bpsData['data'];
+                } else {
+                    $bpsList = $bpsData;
+                }
+            }
+
+            // Pastikan hanya ambil 12 data pertama (sesuai screenshot)
+            $bpsList = array_slice($bpsList, 0, 12);
         @endphp
 
         <!-- Pending Survey Alert -->
@@ -147,6 +183,97 @@
             </div>
         </div>
         @endif
+
+<!-- ===== DATA BPS ===== -->
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mt-6">
+    <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
+        <h3 class="font-bold text-gray-800">
+            <i class="fa-solid fa-chart-simple mr-2 text-primary"></i>
+            Persentase Keluhan Kesehatan (BPS 2017)
+        </h3>
+        <span class="text-xs text-gray-400">Sumber: BPS</span>
+    </div>
+
+    <div class="overflow-x-auto max-h-80 overflow-y-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-blue-50 text-primary sticky top-0">
+                <tr>
+                    <th class="px-4 py-2 text-left font-semibold text-xs w-12">NO</th>
+                    <th class="px-4 py-2 text-left font-semibold text-xs">Provinsi</th>
+                    <th class="px-4 py-2 text-right font-semibold text-xs w-32">Persentase Keluhan (%)</th>
+                </tr>
+            </thead>
+            <tbody id="bps-data-body">
+                <tr>
+                    <td colspan="3" class="text-center text-gray-400 py-4 text-sm">
+                        <i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data BPS...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+// === FETCH DATA BPS LANGSUNG DARI BROWSER (sama seperti native) ===
+async function fetchBPS() {
+    const tbody = document.getElementById('bps-data-body');
+
+    // URL API BPS (sama persis dengan yang di native)
+    const url = "https://webapi.bps.go.id/v1/api/interoperabilitas/datasource/simdasi/id/25/tahun/2017/id_tabel/TEptbDV0QlRORVl6cjl0THhMbk02Zz09/wilayah/0000000/key/e34d50c3e2e4773ebe4c8162f7a76057";
+
+    try {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error('Gagal mengambil data. Status: ' + response.status);
+        }
+
+        const data = await response.json();
+
+        // Cek struktur data seperti di native: data.data[1].data
+        if (data.status === 'OK' && data.data && data.data[1] && data.data[1].data) {
+            const provinsiList = data.data[1].data;
+            let html = '';
+
+            provinsiList.forEach((item, index) => {
+                // Ambil nilai dari variables (key unik seperti lxkwts7rnj)
+                const valObj = Object.values(item.variables)[0];
+                const nilai = valObj ? valObj.value : '0';
+
+                html += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-center text-xs text-gray-500">${index + 1}</td>
+                        <td class="px-4 py-2 text-xs font-medium text-gray-700">${item.label}</td>
+                        <td class="px-4 py-2 text-right text-xs font-semibold text-primary">${nilai}%</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        } else {
+            throw new Error('Format data tidak dikenali atau data kosong.');
+        }
+
+    } catch (error) {
+        console.error('BPS Error:', error);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="3" class="text-center text-red-500 py-4 text-sm">
+                    <i class="fa-solid fa-circle-exclamation mr-2"></i>
+                    Gagal memuat data BPS: ${error.message}
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// Jalankan saat halaman selesai dimuat
+document.addEventListener('DOMContentLoaded', fetchBPS);
+</script>
+@endpush
+
     </main>
 </div>
 
