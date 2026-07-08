@@ -114,11 +114,27 @@
                                     </td>
                                     <td class="px-4 py-3">
                                         @if($q->status === 'waiting')
-                                            <a href="{{ route('admin.queues.index', ['call' => $q->id]) }}"
-                                               onclick="return confirm('Panggil antrian ini?')"
-                                               class="text-xs bg-primary text-white px-2 py-1 rounded-lg hover:bg-primary-light transition">
-                                                <i class="fa-solid fa-bullhorn mr-1"></i>Panggil
-                                            </a>
+                                            <form action="{{ route('admin.queues.call') }}" method="POST"
+                                                  onsubmit="return confirm('Panggil antrian ini?')" class="inline">
+                                                @csrf
+                                                <input type="hidden" name="queue_id" value="{{ $q->id }}">
+                                                <button type="submit"
+                                                        class="text-xs bg-primary text-white px-2 py-1 rounded-lg hover:bg-primary-light transition">
+                                                    <i class="fa-solid fa-bullhorn mr-1"></i>Panggil
+                                                </button>
+                                            </form>
+                                        @elseif($q->status === 'called')
+                                            <form action="{{ route('admin.queues.updateStatus') }}" method="POST"
+                                                  onsubmit="return confirm('Tandai selesai?')" class="inline">
+                                                @csrf
+                                                @method('PUT')
+                                                <input type="hidden" name="queue_id" value="{{ $q->id }}">
+                                                <input type="hidden" name="status" value="done">
+                                                <button type="submit"
+                                                        class="text-xs bg-green-600 text-white px-2 py-1 rounded-lg hover:bg-green-700 transition">
+                                                    <i class="fa-solid fa-check mr-1"></i>Selesai
+                                                </button>
+                                            </form>
                                         @endif
                                     </td>
                                 </tr>
